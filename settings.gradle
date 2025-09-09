@@ -20,14 +20,8 @@ rootProject.name = "Qualcomm AI Hub Android Sample Apps"
 if (Boolean.valueOf(properties["includeClassificationApp"])) {
     include ':ImageClassification'
 }
-//if (Boolean.valueOf(properties["includeSuperResolutionApp"])) {
-//    include ':SuperResolution'
-//}
 
 if (Boolean.valueOf(properties["includeSemanticSegmentationApp"])) {
     include ':SemanticSegmentation'
 }
 
-//if (Boolean.valueOf(properties["includeChatApp"])) {
-//    include ':ChatApp'
-//}
