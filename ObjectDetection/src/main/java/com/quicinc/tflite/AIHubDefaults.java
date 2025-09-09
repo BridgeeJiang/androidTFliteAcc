@@ -2,7 +2,7 @@
 // Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 // ---------------------------------------------------------------------
-package com.quicinc.tflite;
+package com.tflite;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -10,9 +10,9 @@ import java.util.Set;
 
 public class AIHubDefaults {
     // Delegates enabled to replicate AI Hub's defaults on Qualcomm devices.
-    public static final Set<com.quicinc.tflite.TFLiteHelpers.DelegateType> enabledDelegates = new HashSet<>(Arrays.asList(
-            com.quicinc.tflite.TFLiteHelpers.DelegateType.QNN_NPU,
-            com.quicinc.tflite.TFLiteHelpers.DelegateType.GPUv2
+    public static final Set<TFLiteHelpers.DelegateType> enabledDelegates = new HashSet<>(Arrays.asList(
+            TFLiteHelpers.DelegateType.QNN_NPU,
+            TFLiteHelpers.DelegateType.GPUv2
     ));
 
     // Number of threads AI Hub uses by default for layers running on CPU.
@@ -21,7 +21,7 @@ public class AIHubDefaults {
 
     // The default delegate registry order for AI Hub.
     // For more details, see the JavaDoc for TFLiteHelpers::CreateInterpreterAndDelegatesFromOptions.
-    public static final com.quicinc.tflite.TFLiteHelpers.DelegateType[][] delegatePriorityOrder = new TFLiteHelpers.DelegateType[][] {
+    public static final TFLiteHelpers.DelegateType[][] delegatePriorityOrder = new TFLiteHelpers.DelegateType[][] {
             // 1. QNN_NPU + GPUv2 + XNNPack
             // https://app.aihub.qualcomm.com/docs/hub/api.html#profile-inference-options
             // Similar to AI Hub "compute_unit=all", or "compute_unit=npu,gpu,cpu" on QC devices that support QNN

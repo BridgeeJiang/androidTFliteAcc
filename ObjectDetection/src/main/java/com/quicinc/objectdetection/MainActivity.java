@@ -7,7 +7,6 @@ package com.quicinc.objectdetection;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.Matrix;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -31,12 +30,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.quicinc.tflite.AIHubDefaults;
+import com.tflite.AIHubDefaults;
 
 import org.tensorflow.lite.Interpreter;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
