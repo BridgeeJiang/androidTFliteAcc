@@ -30,7 +30,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.tflite.AIHubDefaults;
+import com.quicinc.tflite.AIHubDefaults;
 
 import org.tensorflow.lite.Interpreter;
 

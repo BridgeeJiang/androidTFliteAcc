@@ -2,7 +2,7 @@
 // Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 // ---------------------------------------------------------------------
-package com.tflite;
+package com.quicinc.tflite;
 
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
