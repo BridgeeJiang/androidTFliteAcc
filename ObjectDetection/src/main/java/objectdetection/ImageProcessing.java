@@ -2,7 +2,7 @@
 // Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 // ---------------------------------------------------------------------
-package com.quicinc;
+package com.quicinc.objectdetection;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;

@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
 
     // UI Elements
     private PreviewView previewView;
-    private OverlayView overlayView;
+    private com.quicinc.objectdetection.OverlayView overlayView;
     private Button cameraControlButton;
     private RadioGroup delegateSelectionGroup;
     private RadioButton cpuOnlyRadio;

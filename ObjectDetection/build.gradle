@@ -4,12 +4,12 @@ plugins {
 
 android {
     namespace 'com.quicinc.objectdetection'
-    compileSdk Integer.parseInt(project.properties['androidCompileSDK'])
+    compileSdk Integer.valueOf(androidCompileSDK)
 
     defaultConfig {
         applicationId "com.quicinc.objectdetection"
-        minSdk Integer.parseInt(project.properties['androidMinSDK'])
-        targetSdk Integer.parseInt(project.properties['androidTargetSDK'])
+        minSdk Integer.valueOf(androidMinSDK)
+        targetSdk Integer.valueOf(androidTargetSDK)
         versionCode 1
         versionName "1.0"
 
@@ -26,17 +26,17 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.valueOf("VERSION_" + project.properties['javaSourceCompatibilityVersion'])
-        targetCompatibility JavaVersion.valueOf("VERSION_" + project.properties['javaTargetCompatibilityVersion'])
+        sourceCompatibility JavaVersion.valueOf("VERSION_$javaSourceCompatibilityVersion")
+        targetCompatibility JavaVersion.valueOf("VERSION_$javaTargetCompatibilityVersion")
     }
 
     preBuild.doFirst {
         if (!file("./src/main/assets/" + project.properties["objectdetection_tfLiteModelAsset"]).exists()) {
-            throw new RuntimeException(project.properties["missingModelErrorMsg"])
+            throw new RuntimeException(missingModelErrorMsg)
         }
 
         if (!file("./src/main/assets/" + project.properties["objectdetection_tfLiteLabelsAsset"]).exists()) {
-            throw new RuntimeException(project.properties["missingModelErrorMsg"])
+            throw new RuntimeException(missingModelErrorMsg)
         }
     }
 }

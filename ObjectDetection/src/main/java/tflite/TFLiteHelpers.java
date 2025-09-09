@@ -10,7 +10,6 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.qualcomm.qti.QnnDelegate;
-
 import org.tensorflow.lite.Delegate;
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.gpu.GpuDelegate;
