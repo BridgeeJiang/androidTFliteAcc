@@ -1,0 +1,3 @@
+D:/icomp/android/ai-hub-apps/apps/androidTFliteAcc/ChatApp/.cxx/Debug/6t676qp3/arm64-v8a/CMakeFiles/chatapp.dir
+D:/icomp/android/ai-hub-apps/apps/androidTFliteAcc/ChatApp/.cxx/Debug/6t676qp3/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/icomp/android/ai-hub-apps/apps/androidTFliteAcc/ChatApp/.cxx/Debug/6t676qp3/arm64-v8a/CMakeFiles/rebuild_cache.dir

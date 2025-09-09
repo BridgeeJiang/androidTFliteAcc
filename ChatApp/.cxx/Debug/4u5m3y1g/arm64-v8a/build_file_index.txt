@@ -1,0 +1,1 @@
+D:\icomp\android\ai-hub-apps\apps\androidTFliteAcc\ChatApp\src\main\cpp\CMakeLists.txt

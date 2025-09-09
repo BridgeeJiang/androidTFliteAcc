@@ -1,0 +1,1 @@
+D:\icomp\android\ai-hub-apps\apps\androidTFliteAcc\ChatApp\build\intermediates\cxx\Debug\4u5m3y1g\obj\arm64-v8a

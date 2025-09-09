@@ -1,0 +1,38 @@
+{
+  "buildFiles": [
+    "D:\\icomp\\android\\ai-hub-apps\\apps\\androidTFliteAcc\\ChatApp\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "D:\\software\\app\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "D:\\icomp\\android\\ai-hub-apps\\apps\\androidTFliteAcc\\ChatApp\\.cxx\\Debug\\4u5m3y1g\\arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "D:\\software\\app\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "D:\\icomp\\android\\ai-hub-apps\\apps\\androidTFliteAcc\\ChatApp\\.cxx\\Debug\\4u5m3y1g\\arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "chatapp::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "chatapp",
+      "output": "D:\\icomp\\android\\ai-hub-apps\\apps\\androidTFliteAcc\\ChatApp\\build\\intermediates\\cxx\\Debug\\4u5m3y1g\\obj\\arm64-v8a\\libchatapp.so",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "D:\\software\\app\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe",
+      "cppCompilerExecutable": "D:\\software\\app\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}
