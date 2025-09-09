@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <!-- Title Bar -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/appTitleCard"
+        android:layout_width="0dp"
+        android:layout_height="50dp"
+        android:backgroundTint="@color/purple_qcom"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/appTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:text="Object Detection"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Camera Preview -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/controlsCard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appTitleCard" />
+
+    <!-- Overlay for drawing bounding boxes -->
+    <com.quicinc.objectdetection.OverlayView
+        android:id="@+id/overlayView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="@+id/previewView"
+        app:layout_constraintEnd_toEndOf="@+id/previewView"
+        app:layout_constraintStart_toStartOf="@+id/previewView"
+        app:layout_constraintTop_toTopOf="@+id/previewView" />
+
+    <!-- Controls Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/controlsCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:backgroundTint="@color/light_gray"
+        app:cardCornerRadius="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/bottomControlsCard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Inference Time Display -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/inference_time"
+                    android:textColor="#344235"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/inferenceTimeText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-- ms"
+                    android:textColor="@color/purple_qcom"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Detection Results -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/detection_results"
+                android:textColor="#344235"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/detectionResultsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:maxLines="3"
+                android:scrollbars="vertical"
+                android:text="No detections"
+                android:textColor="@color/purple_qcom"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Bottom Controls -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/bottomControlsCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/purple_qcom"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <!-- Delegate Selection -->
+            <RadioGroup
+                android:id="@+id/delegateSelectionGroup"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/cpuOnlyRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:buttonTint="@color/white"
+                    android:text="CPU Only"
+                    android:textColor="@color/white"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/defaultDelegateRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="@color/white"
+                    android:checked="true"
+                    android:text="All Hardware"
+                    android:textColor="@color/white"
+                    android:textSize="14sp" />
+
+            </RadioGroup>
+
+            <!-- Camera Control Button -->
+            <Button
+                android:id="@+id/cameraControlButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/white"
+                android:text="@string/start_camera"
+                android:textColor="@color/purple_qcom" />
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

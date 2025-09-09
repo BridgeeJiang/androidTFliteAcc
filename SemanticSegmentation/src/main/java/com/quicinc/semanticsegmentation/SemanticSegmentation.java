@@ -59,8 +59,8 @@ public class SemanticSegmentation implements AutoCloseable {
      * @throws IOException If the model can't be read from disk.
      */
     public SemanticSegmentation(Context context,
-                               String modelPath,
-                               TFLiteHelpers.DelegateType[][] delegatePriorityOrder) throws IOException, NoSuchAlgorithmException {
+                                String modelPath,
+                                TFLiteHelpers.DelegateType[][] delegatePriorityOrder) throws IOException, NoSuchAlgorithmException {
         // Initialize OpenCV
         new OpenCVNativeLoader().init();
 
@@ -91,10 +91,9 @@ public class SemanticSegmentation implements AutoCloseable {
         Tensor outputTensor = tfLiteInterpreter.getOutputTensor(0);
         outputShape = outputTensor.shape();
         DataType outputType = outputTensor.dataType();
-        assert outputShape.length == 4; // 4D Output Tensor: [Batch, Output Height, Output Width, Classes]
+        assert outputShape.length == 3; // 3D Output Tensor: [Batch, Output Height, Output Width] - direct mask output
         assert outputShape[0] == 1; // Batch size is 1
-        assert outputShape[3] == NUM_CLASSES;
-        assert outputType == DataType.FLOAT32; // Requires an unquantized FFNet variant
+        assert outputType == DataType.UINT8; // Direct mask output with class IDs
 
         int inputHeight = inputShape[1];
         int inputWidth = inputShape[2];
@@ -111,7 +110,7 @@ public class SemanticSegmentation implements AutoCloseable {
         inputMatAbgr = new Mat(inputWidth, inputHeight, CvType.CV_8UC4);
         inputMatRgb = new Mat(inputWidth, inputHeight, CvType.CV_8UC3);
         inputMatBgr = new Mat(inputWidth, inputHeight, CvType.CV_8UC3);
-        outputCategories = new Mat(outputWidth, outputHeight, CvType.CV_32FC1);
+        outputCategories = new Mat(outputWidth, outputHeight, CvType.CV_8UC1);
     }
 
     /**
@@ -241,22 +240,18 @@ public class SemanticSegmentation implements AutoCloseable {
         int outputHeight = outputShape[1];
         int outputWidth = outputShape[2];
 
-        // Convert output to 3D OpenCV image
-        Mat outputs = new Mat(new int[]{outputHeight, outputWidth, NUM_CLASSES}, CvType.CV_32F);
+        // Get output directly as uint8 mask (no need for argmax since model outputs class IDs directly)
         ByteBuffer outputBuffer = tfLiteInterpreter.getOutputTensor(0).asReadOnlyBuffer();
-        FloatBuffer floatBuf = outputBuffer.asFloatBuffer();
-        float[] arr = new float[floatBuf.remaining()];
-        floatBuf.get(arr);
-        outputs.put(new int[]{0, 0, 0}, arr);
+        byte[] maskArray = new byte[outputHeight * outputWidth];
+        outputBuffer.get(maskArray);
 
-        // Take argmax (top class prediction) and scale up
-        Core.reduceArgMax(outputs, outputCategories, 2);
-        outputCategories.convertTo(outputCategories, CvType.CV_8UC1);
-        outputCategories = outputCategories.reshape(1, new int[]{outputHeight, outputWidth});
+        // Convert to OpenCV Mat
+        outputCategories = new Mat(outputHeight, outputWidth, CvType.CV_8UC1);
+        outputCategories.put(0, 0, maskArray);
 
-        // Spread out the indices to fill up [0, 1]
-        // This will make better use of the rainbow color map below
-        Core.multiply(outputCategories, new Scalar(255.0f / (float)(NUM_CLASSES - 1)), outputCategories);
+        // Spread out the indices to fill up [0, 255] for better color mapping
+        // Scale class IDs to use full color range (assuming max 19 classes for Cityscapes)
+        Core.multiply(outputCategories, new Scalar(255.0f / 18.0f), outputCategories);
 
         // Rotate output to match input
         switch (sensorOrientation) {

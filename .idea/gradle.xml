@@ -11,6 +11,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/ImageClassification" />
+            <option value="$PROJECT_DIR$/ObjectDetection" />
             <option value="$PROJECT_DIR$/SemanticSegmentation" />
           </set>
         </option>

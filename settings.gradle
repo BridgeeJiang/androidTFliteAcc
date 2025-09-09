@@ -25,3 +25,7 @@ if (Boolean.valueOf(properties["includeSemanticSegmentationApp"])) {
     include ':SemanticSegmentation'
 }
 
+if (Boolean.valueOf(properties["includeObjectDetectionApp"])) {
+    include ':ObjectDetection'
+}
+
