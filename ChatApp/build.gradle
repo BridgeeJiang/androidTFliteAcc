@@ -8,7 +8,7 @@ plugins {
 // Download QAIRT SDK from https://qpm.qualcomm.com/#/main/tools/details/Qualcomm_AI_Runtime_SDK
 // e.g. "/opt/qcom/aistack/qairt/2.33.0.250327"
 //      "C:\\Qualcomm\\AIStack\\QAIRT\\2.33.0.250327"
-def qnnSDKLocalPath= ""   // <-- Please add QNN SDK root path
+def qnnSDKLocalPath= "D:\\SNPE_ROOT"   // <-- Please add QNN SDK root path
 
 // List of model assets
 def models = ["llm"]
