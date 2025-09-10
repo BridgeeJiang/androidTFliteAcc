@@ -32,6 +32,7 @@ import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.quicinc.tflite.AIHubDefaults;
+import com.quicinc.tflite.TFLiteHelpers;
 
 import org.tensorflow.lite.Interpreter;
 
@@ -125,6 +126,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private TFLiteHelpers.DelegateType[][] getSafeDelegatePriorityOrder() {
+        // Create a very conservative delegate priority order
+        // Start with CPU-only and gradually add hardware acceleration
+        return new TFLiteHelpers.DelegateType[][] {
+                // 1. Try CPU-only first (most compatible)
+                { },
+                // Note: We intentionally avoid GPU and QNN delegates initially
+                // to prevent crashes on incompatible devices
+        };
+    }
+
     private void initializeModel() {
         inferenceExecutor.execute(() -> {
             try {
@@ -136,15 +148,19 @@ public class MainActivity extends AppCompatActivity {
                     throw new RuntimeException("Model file '" + modelPath + "' is empty or missing. Please check assets/README.txt for instructions on downloading the YOLOv8 model.");
                 }
 
+                // Always use the safest delegate configuration to avoid crashes
+                // This prioritizes stability over performance
+                TFLiteHelpers.DelegateType[][] delegatePriorityOrder;
+
                 if (cpuOnlyRadio.isChecked()) {
                     // CPU only - use empty delegate priority order
-                    objectDetection = new ObjectDetection(this, modelPath, labelsPath,
-                            AIHubDefaults.delegatePriorityOrderForDelegates(new java.util.HashSet<>()));
+                    delegatePriorityOrder = new TFLiteHelpers.DelegateType[][] { { } };
                 } else {
-                    // Use hardware acceleration with default delegate priority order
-                    objectDetection = new ObjectDetection(this, modelPath, labelsPath,
-                            AIHubDefaults.delegatePriorityOrder);
+                    // Use conservative hardware acceleration approach
+                    delegatePriorityOrder = getSafeDelegatePriorityOrder();
                 }
+
+                objectDetection = new ObjectDetection(this, modelPath, labelsPath, delegatePriorityOrder);
 
                 mainHandler.post(() -> {
                     cameraControlButton.setEnabled(true);
@@ -159,10 +175,17 @@ public class MainActivity extends AppCompatActivity {
                         errorMessage = "Model file is invalid or missing. Please check the assets/README.txt for instructions on downloading the YOLOv8 model.";
                     } else if (e.getMessage() != null && e.getMessage().contains("Unable to create an interpreter")) {
                         errorMessage = "Failed to load model. The model file may be corrupted or incompatible.";
+                    } else if (e.getMessage() != null && e.getMessage().contains("QNN")) {
+                        errorMessage = "QNN delegate failed. This device may not support Qualcomm Neural Network acceleration.";
                     } else {
                         errorMessage = "Error loading model: " + e.getMessage();
                     }
                     Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+                });
+            } catch (UnsatisfiedLinkError e) {
+                Log.e(TAG, "Native library error", e);
+                mainHandler.post(() -> {
+                    Toast.makeText(this, "Native library error. This device may not support the required hardware acceleration.", Toast.LENGTH_LONG).show();
                 });
             }
         });
