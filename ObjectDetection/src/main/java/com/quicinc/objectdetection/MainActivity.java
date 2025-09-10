@@ -126,15 +126,36 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isDspSupported() {
+        try {
+            // Check if DSP libraries are available
+            String[] dspLibraries = {"/vendor/lib64/libcdsprpc.so", "/system/lib64/libcdsprpc.so"};
+            for (String lib : dspLibraries) {
+                java.io.File file = new java.io.File(lib);
+                if (file.exists()) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private TFLiteHelpers.DelegateType[][] getSafeDelegatePriorityOrder() {
-        // Create a very conservative delegate priority order
-        // Start with CPU-only and gradually add hardware acceleration
-        return new TFLiteHelpers.DelegateType[][] {
-                // 1. Try CPU-only first (most compatible)
-                { },
-                // Note: We intentionally avoid GPU and QNN delegates initially
-                // to prevent crashes on incompatible devices
-        };
+        if (isDspSupported()) {
+            // Device has DSP support, can try QNN but with fallbacks
+            return new TFLiteHelpers.DelegateType[][] {
+                    { TFLiteHelpers.DelegateType.GPUv2 }, // Skip QNN_NPU for now due to crashes
+                    { } // CPU fallback
+            };
+        } else {
+            // No DSP support, use GPU + CPU only
+            return new TFLiteHelpers.DelegateType[][] {
+                    { TFLiteHelpers.DelegateType.GPUv2 },
+                    { } // CPU fallback
+            };
+        }
     }
 
     private void initializeModel() {
