@@ -7,18 +7,24 @@ package com.quicinc.objectdetection;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
+import android.util.Pair;
 
+import com.quicinc.ImageProcessing;
+import com.quicinc.tflite.AIHubDefaults;
+import com.quicinc.tflite.TFLiteHelpers;
 
-import com.quicinc.tflite.ImageProcessing;
-
+import org.tensorflow.lite.Delegate;
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.support.common.FileUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.MappedByteBuffer;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Object Detection using YOLOv8 model
@@ -34,6 +40,7 @@ public class ObjectDetection {
     private static final int paddingValue = 0;
 
     private Interpreter interpreter;
+    private Map<TFLiteHelpers.DelegateType, Delegate> delegateStore;
     private List<String> labels;
     private ByteBuffer inputBuffer;
     private float[][][] outputBuffer; // [1][8400][84] for YOLOv8
@@ -42,12 +49,71 @@ public class ObjectDetection {
     private int[] inputShape;
     private int[] outputShape;
 
+    /**
+     * Create an Object Detector from the given model.
+     * Uses default compute units: NPU, GPU, CPU.
+     * Ignores compute units that fail to load.
+     *
+     * @param context    App context.
+     * @param modelPath  Model path to load.
+     * @param labelsPath Labels path to load.
+     * @throws IOException If the model can't be read from disk.
+     */
+    public ObjectDetection(Context context, String modelPath, String labelsPath)
+            throws IOException, NoSuchAlgorithmException {
+        this(context, modelPath, labelsPath, AIHubDefaults.delegatePriorityOrder);
+    }
+
+    /**
+     * Create an Object Detector from the given model.
+     * Ignores compute units that fail to load.
+     *
+     * @param context     App context.
+     * @param modelPath   Model path to load.
+     * @param labelsPath  Labels path to load.
+     * @param delegatePriorityOrder Priority order of delegate sets to enable.
+     * @throws IOException If the model can't be read from disk.
+     */
+    public ObjectDetection(Context context, String modelPath, String labelsPath,
+                           TFLiteHelpers.DelegateType[][] delegatePriorityOrder)
+            throws IOException, NoSuchAlgorithmException {
+        // Load TF Lite model
+        Pair<MappedByteBuffer, String> modelAndHash = TFLiteHelpers.loadModelFile(context.getAssets(), modelPath);
+        Pair<Interpreter, Map<TFLiteHelpers.DelegateType, Delegate>> iResult = TFLiteHelpers.CreateInterpreterAndDelegatesFromOptions(
+                modelAndHash.first,
+                delegatePriorityOrder,
+                AIHubDefaults.numCPUThreads,
+                context.getApplicationInfo().nativeLibraryDir,
+                context.getCacheDir().getAbsolutePath(),
+                modelAndHash.second
+        );
+        interpreter = iResult.first;
+        delegateStore = iResult.second;
+
+        initializeModel(context, labelsPath);
+    }
+
+    /**
+     * Create an Object Detector from the given model with custom Interpreter.Options.
+     * This constructor is kept for backward compatibility.
+     *
+     * @param context    App context.
+     * @param modelPath  Model path to load.
+     * @param labelsPath Labels path to load.
+     * @param options    Custom Interpreter.Options.
+     * @throws IOException If the model can't be read from disk.
+     */
     public ObjectDetection(Context context, String modelPath, String labelsPath,
                            Interpreter.Options options) throws IOException {
         // Load model
         ByteBuffer modelBuffer = FileUtil.loadMappedFile(context, modelPath);
         interpreter = new Interpreter(modelBuffer, options);
+        delegateStore = null; // No delegate store when using custom options
 
+        initializeModel(context, labelsPath);
+    }
+
+    private void initializeModel(Context context, String labelsPath) throws IOException {
         // Get input/output tensor info
         inputShape = interpreter.getInputTensor(0).shape();
         outputShape = interpreter.getOutputTensor(0).shape();

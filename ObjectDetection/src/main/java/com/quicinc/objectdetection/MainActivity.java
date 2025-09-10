@@ -6,6 +6,7 @@ package com.quicinc.objectdetection;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -113,34 +114,55 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private boolean isModelFileValid(String modelPath) {
+        try {
+            AssetFileDescriptor fileDescriptor = getAssets().openFd(modelPath);
+            long fileSize = fileDescriptor.getLength();
+            fileDescriptor.close();
+            return fileSize > 1000; // Model should be at least 1KB
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     private void initializeModel() {
         inferenceExecutor.execute(() -> {
             try {
-                Interpreter.Options options = new Interpreter.Options();
-
-                if (cpuOnlyRadio.isChecked()) {
-                    // CPU only
-                    options.setNumThreads(4);
-                } else {
-                    // Use hardware acceleration
-                    options = AIHubDefaults.delegatePriorityOrder();
-                }
-
                 String modelPath = getString(R.string.tfLiteModelAsset);
                 String labelsPath = getString(R.string.tfLiteLabelsAsset);
 
-                objectDetection = new ObjectDetection(this, modelPath, labelsPath, options);
+                // Check if model file is valid before attempting to load
+                if (!isModelFileValid(modelPath)) {
+                    throw new RuntimeException("Model file '" + modelPath + "' is empty or missing. Please check assets/README.txt for instructions on downloading the YOLOv8 model.");
+                }
+
+                if (cpuOnlyRadio.isChecked()) {
+                    // CPU only - use empty delegate priority order
+                    objectDetection = new ObjectDetection(this, modelPath, labelsPath,
+                            AIHubDefaults.delegatePriorityOrderForDelegates(new java.util.HashSet<>()));
+                } else {
+                    // Use hardware acceleration with default delegate priority order
+                    objectDetection = new ObjectDetection(this, modelPath, labelsPath,
+                            AIHubDefaults.delegatePriorityOrder);
+                }
 
                 mainHandler.post(() -> {
                     cameraControlButton.setEnabled(true);
                     Toast.makeText(this, "Model loaded successfully", Toast.LENGTH_SHORT).show();
                 });
 
-            } catch (IOException e) {
+            } catch (IOException | java.security.NoSuchAlgorithmException | RuntimeException e) {
                 Log.e(TAG, "Error initializing model", e);
                 mainHandler.post(() -> {
-                    Toast.makeText(this, "Error loading model: " + e.getMessage(),
-                            Toast.LENGTH_LONG).show();
+                    String errorMessage;
+                    if (e.getMessage() != null && e.getMessage().contains("ByteBuffer is not a valid TensorFlow Lite model")) {
+                        errorMessage = "Model file is invalid or missing. Please check the assets/README.txt for instructions on downloading the YOLOv8 model.";
+                    } else if (e.getMessage() != null && e.getMessage().contains("Unable to create an interpreter")) {
+                        errorMessage = "Failed to load model. The model file may be corrupted or incompatible.";
+                    } else {
+                        errorMessage = "Error loading model: " + e.getMessage();
+                    }
+                    Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
                 });
             }
         });
