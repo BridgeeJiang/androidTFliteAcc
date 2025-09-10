@@ -22,11 +22,11 @@ public class OverlayView extends View {
     private Paint boxPaint;
     private Paint textPaint;
     private Paint backgroundPaint;
-    
+
     // Colors for different classes
     private final int[] colors = {
-        Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.CYAN,
-        Color.MAGENTA, Color.WHITE, Color.GRAY, Color.LTGRAY, Color.DKGRAY
+            Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.CYAN,
+            Color.MAGENTA, Color.WHITE, Color.GRAY, Color.LTGRAY, Color.DKGRAY
     };
 
     public OverlayView(Context context) {
@@ -69,16 +69,18 @@ public class OverlayView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        
+
         if (detections == null || detections.isEmpty()) {
             return;
         }
 
-        for (Detection detection : detections) {
+        for (int i = 0; i < detections.size(); i++) {
+            Detection detection = detections.get(i);
             RectF box = detection.getBoundingBox();
-            
+
             // Choose color based on class ID
-            int color = colors[detection.getClassId() % colors.length];
+            int colorIndex = Math.abs(detection.getClassId()) % colors.length;
+            int color = colors[colorIndex];
             boxPaint.setColor(color);
             backgroundPaint.setColor(color);
             backgroundPaint.setAlpha(128); // Semi-transparent background
@@ -90,18 +92,22 @@ public class OverlayView extends View {
             String label = detection.toString();
             float textWidth = textPaint.measureText(label);
             float textHeight = textPaint.getTextSize();
-            
+
+            // Ensure text background is within canvas bounds
+            float textLeft = Math.max(0, box.left);
+            float textTop = Math.max(textHeight + 8, box.top);
+
             RectF textBackground = new RectF(
-                box.left,
-                box.top - textHeight - 8,
-                box.left + textWidth + 16,
-                box.top
+                    textLeft,
+                    textTop - textHeight - 8,
+                    Math.min(getWidth(), textLeft + textWidth + 16),
+                    textTop
             );
-            
+
             canvas.drawRect(textBackground, backgroundPaint);
-            
+
             // Draw label text
-            canvas.drawText(label, box.left + 8, box.top - 8, textPaint);
+            canvas.drawText(label, textLeft + 8, textTop - 8, textPaint);
         }
     }
 }

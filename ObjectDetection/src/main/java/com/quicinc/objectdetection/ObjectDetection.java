@@ -34,7 +34,7 @@ public class ObjectDetection {
 
     // Model configuration
     private static final int INPUT_SIZE = 640;
-    private static final float CONFIDENCE_THRESHOLD = 0.5f;
+    private static final float CONFIDENCE_THRESHOLD = 0.25f; // 降低置信度阈值
     private static final float IOU_THRESHOLD = 0.45f;
     private static final int MAX_DETECTIONS = 100;
     private static final int paddingValue = 0;
@@ -134,8 +134,22 @@ public class ObjectDetection {
 
         outputBuffer = new float[outputShape[0]][outputShape[1]][outputShape[2]];
 
-        // Load labels
-        labels = FileUtil.loadLabels(context, labelsPath);
+        // Load labels with error handling
+        try {
+            labels = FileUtil.loadLabels(context, labelsPath);
+            android.util.Log.d(TAG, "Loaded " + labels.size() + " labels from " + labelsPath);
+            // 打印前几个标签用于调试
+            for (int i = 0; i < Math.min(5, labels.size()); i++) {
+                android.util.Log.d(TAG, "Label " + i + ": " + labels.get(i));
+            }
+        } catch (IOException e) {
+            android.util.Log.e(TAG, "Failed to load labels from " + labelsPath, e);
+            // 创建默认标签列表
+            labels = new ArrayList<>();
+            for (int i = 0; i < 80; i++) {
+                labels.add("class_" + i);
+            }
+        }
     }
 
     public List<Detection> detect(Bitmap bitmap) {
@@ -153,6 +167,7 @@ public class ObjectDetection {
                 bitmap.getWidth(),
                 bitmap.getHeight());
 
+        android.util.Log.d(TAG, "Detected " + detections.size() + " objects in " + inferenceTime + "ms");
         return detections;
     }
 
@@ -187,7 +202,7 @@ public class ObjectDetection {
             float maxConfidence = 0;
             int bestClass = -1;
 
-            for (int j = 4; j < detection.length; j++) {
+            for (int j = 4; j < detection.length && j < 4 + labels.size(); j++) {
                 if (detection[j] > maxConfidence) {
                     maxConfidence = detection[j];
                     bestClass = j - 4;
@@ -205,14 +220,27 @@ public class ObjectDetection {
             float right = (centerX + width / 2) * originalWidth / INPUT_SIZE;
             float bottom = (centerY + height / 2) * originalHeight / INPUT_SIZE;
 
+            // Debug: log first few detections
+            if (allDetections.size() < 3) {
+                android.util.Log.d(TAG, "Detection " + (allDetections.size() + 1) + ": " +
+                        "raw center=(" + centerX + "," + centerY + ") size=(" + width + "," + height + ")");
+                android.util.Log.d(TAG, "  scaled bbox=[" + left + "," + top + "," + right + "," + bottom + "]");
+                android.util.Log.d(TAG, "  original size=" + originalWidth + "x" + originalHeight + ", input size=" + INPUT_SIZE);
+            }
+
             // Clamp to image bounds
             left = Math.max(0, Math.min(left, originalWidth));
             top = Math.max(0, Math.min(top, originalHeight));
             right = Math.max(0, Math.min(right, originalWidth));
             bottom = Math.max(0, Math.min(bottom, originalHeight));
 
+            // Skip invalid boxes
+            if (right <= left || bottom <= top) {
+                continue;
+            }
+
             RectF boundingBox = new RectF(left, top, right, bottom);
-            String label = bestClass < labels.size() ? labels.get(bestClass) : "Unknown";
+            String label = (bestClass >= 0 && bestClass < labels.size()) ? labels.get(bestClass) : "Unknown";
 
             allDetections.add(new Detection(boundingBox, label, maxConfidence, bestClass));
         }
