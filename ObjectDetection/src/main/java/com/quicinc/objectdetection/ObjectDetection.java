@@ -34,10 +34,11 @@ public class ObjectDetection {
 
     // Model configuration
     private static final int INPUT_SIZE = 640;
-    private static final float CONFIDENCE_THRESHOLD = 0.25f; // 降低置信度阈值
+    private static final float CONFIDENCE_THRESHOLD = 0.1f; // 进一步降低置信度阈值用于调试
     private static final float IOU_THRESHOLD = 0.45f;
     private static final int MAX_DETECTIONS = 100;
     private static final int paddingValue = 0;
+    private static final boolean USE_ASPECT_RATIO_CORRECTION = false; // 设为false使用简单缩放
 
     private Interpreter interpreter;
     private Map<TFLiteHelpers.DelegateType, Delegate> delegateStore;
@@ -162,7 +163,7 @@ public class ObjectDetection {
         interpreter.run(inputBuffer, outputBuffer);
         long inferenceTime = System.currentTimeMillis() - startTime;
 
-        // Post-process results
+        // Post-process results with scaling info
         List<Detection> detections = postProcess(outputBuffer[0],
                 bitmap.getWidth(),
                 bitmap.getHeight());
@@ -188,9 +189,57 @@ public class ObjectDetection {
     private List<Detection> postProcess(float[][] output, int originalWidth, int originalHeight) {
         List<Detection> allDetections = new ArrayList<>();
 
+        int finalWidth, finalHeight, offsetX, offsetY;
+        float scaleX, scaleY;
+
+        if (USE_ASPECT_RATIO_CORRECTION) {
+            // Calculate scaling parameters for coordinate transformation
+            // This matches the logic in ImageProcessing.resizeAndPadMaintainAspectRatio
+            float ratioBitmap = (float) originalWidth / (float) originalHeight;
+            float ratioMax = (float) INPUT_SIZE / (float) INPUT_SIZE; // 1.0 for square input
+
+            finalWidth = INPUT_SIZE;
+            finalHeight = INPUT_SIZE;
+
+            if (ratioMax > ratioBitmap) {
+                // ratioBitmap < 1.0, image is taller than wide
+                finalWidth = (int) ((float) INPUT_SIZE * ratioBitmap);
+                offsetX = (INPUT_SIZE - finalWidth) / 2;
+                offsetY = 0;
+            } else {
+                // ratioBitmap >= 1.0, image is wider than tall or square
+                finalHeight = (int) ((float) INPUT_SIZE / ratioBitmap);
+                offsetX = 0;
+                offsetY = (INPUT_SIZE - finalHeight) / 2;
+            }
+
+            scaleX = (float) originalWidth / (float) finalWidth;
+            scaleY = (float) originalHeight / (float) finalHeight;
+        } else {
+            // Simple scaling without aspect ratio correction (original method)
+            finalWidth = INPUT_SIZE;
+            finalHeight = INPUT_SIZE;
+            offsetX = 0;
+            offsetY = 0;
+            scaleX = (float) originalWidth / (float) INPUT_SIZE;
+            scaleY = (float) originalHeight / (float) INPUT_SIZE;
+        }
+
+        android.util.Log.d(TAG, "PostProcess: mode=" + (USE_ASPECT_RATIO_CORRECTION ? "aspect_ratio" : "simple") +
+                ", original=" + originalWidth + "x" + originalHeight +
+                ", final=" + finalWidth + "x" + finalHeight +
+                ", offset=(" + offsetX + "," + offsetY + ")" +
+                ", scale=(" + scaleX + "," + scaleY + ")");
+
+        int totalDetections = 0;
+        int confidenceFiltered = 0;
+        int boundsFiltered = 0;
+        int invalidFiltered = 0;
+
         // Parse detections from output
         for (int i = 0; i < output.length; i++) {
             float[] detection = output[i];
+            totalDetections++;
 
             // Extract bounding box (center_x, center_y, width, height)
             float centerX = detection[0];
@@ -211,21 +260,91 @@ public class ObjectDetection {
 
             // Filter by confidence threshold
             if (maxConfidence < CONFIDENCE_THRESHOLD) {
+                confidenceFiltered++;
                 continue;
             }
 
-            // Convert to corner coordinates and scale to original image size
-            float left = (centerX - width / 2) * originalWidth / INPUT_SIZE;
-            float top = (centerY - height / 2) * originalHeight / INPUT_SIZE;
-            float right = (centerX + width / 2) * originalWidth / INPUT_SIZE;
-            float bottom = (centerY + height / 2) * originalHeight / INPUT_SIZE;
+            float left, top, right, bottom;
 
-            // Debug: log first few detections
+            if (USE_ASPECT_RATIO_CORRECTION) {
+                // Convert normalized coordinates to INPUT_SIZE pixel coordinates
+                float centerXPixels = centerX * INPUT_SIZE;
+                float centerYPixels = centerY * INPUT_SIZE;
+                float widthPixels = width * INPUT_SIZE;
+                float heightPixels = height * INPUT_SIZE;
+
+                // Convert to corner coordinates in INPUT_SIZE space
+                float x1 = centerXPixels - widthPixels / 2;
+                float y1 = centerYPixels - heightPixels / 2;
+                float x2 = centerXPixels + widthPixels / 2;
+                float y2 = centerYPixels + heightPixels / 2;
+
+                // Remove padding offset
+                x1 -= offsetX;
+                y1 -= offsetY;
+                x2 -= offsetX;
+                y2 -= offsetY;
+
+                // Debug: log first few detections before scaling
+                if (allDetections.size() < 3) {
+                    android.util.Log.d(TAG, "Detection " + (allDetections.size() + 1) + ": " +
+                            "raw center=(" + centerX + "," + centerY + ") size=(" + width + "," + height + ")");
+                    android.util.Log.d(TAG, "  pixels center=(" + centerXPixels + "," + centerYPixels + ") size=(" + widthPixels + "," + heightPixels + ")");
+                    android.util.Log.d(TAG, "  after offset removal: [" + x1 + "," + y1 + "," + x2 + "," + y2 + "]");
+                    android.util.Log.d(TAG, "  offset=(" + offsetX + "," + offsetY + ") scale=(" + scaleX + "," + scaleY + ")");
+                    android.util.Log.d(TAG, "  original size=" + originalWidth + "x" + originalHeight + ", final size=" + finalWidth + "x" + finalHeight);
+                }
+
+                // Check if coordinates are still valid after offset removal
+                // Only skip if the box is completely outside the valid area or has invalid dimensions
+                if (x2 <= x1 || y2 <= y1) {
+                    if (allDetections.size() < 3) {
+                        android.util.Log.w(TAG, "  Skipping detection: invalid box dimensions");
+                    }
+                    boundsFiltered++;
+                    continue;
+                }
+
+                // Skip if box is completely outside the valid area
+                if (x2 <= 0 || y2 <= 0 || x1 >= finalWidth || y1 >= finalHeight) {
+                    if (allDetections.size() < 3) {
+                        android.util.Log.w(TAG, "  Skipping detection: completely outside valid area");
+                    }
+                    boundsFiltered++;
+                    continue;
+                }
+
+                // Scale to original image size
+                left = x1 * scaleX;
+                top = y1 * scaleY;
+                right = x2 * scaleX;
+                bottom = y2 * scaleY;
+            } else {
+                // Simple scaling (original method)
+                // First convert normalized coordinates to INPUT_SIZE coordinates, then scale to original size
+                float centerXPixels = centerX * INPUT_SIZE;
+                float centerYPixels = centerY * INPUT_SIZE;
+                float widthPixels = width * INPUT_SIZE;
+                float heightPixels = height * INPUT_SIZE;
+
+                left = (centerXPixels - widthPixels / 2) * scaleX;
+                top = (centerYPixels - heightPixels / 2) * scaleY;
+                right = (centerXPixels + widthPixels / 2) * scaleX;
+                bottom = (centerYPixels + heightPixels / 2) * scaleY;
+
+                // Debug: log first few detections
+                if (allDetections.size() < 3) {
+                    android.util.Log.d(TAG, "Detection " + (allDetections.size() + 1) + ": " +
+                            "raw center=(" + centerX + "," + centerY + ") size=(" + width + "," + height + ")");
+                    android.util.Log.d(TAG, "  pixels center=(" + centerXPixels + "," + centerYPixels + ") size=(" + widthPixels + "," + heightPixels + ")");
+                    android.util.Log.d(TAG, "  simple scaled bbox=[" + left + "," + top + "," + right + "," + bottom + "]");
+                    android.util.Log.d(TAG, "  scale=(" + scaleX + "," + scaleY + ")");
+                }
+            }
+
+            // Debug: log final coordinates
             if (allDetections.size() < 3) {
-                android.util.Log.d(TAG, "Detection " + (allDetections.size() + 1) + ": " +
-                        "raw center=(" + centerX + "," + centerY + ") size=(" + width + "," + height + ")");
-                android.util.Log.d(TAG, "  scaled bbox=[" + left + "," + top + "," + right + "," + bottom + "]");
-                android.util.Log.d(TAG, "  original size=" + originalWidth + "x" + originalHeight + ", input size=" + INPUT_SIZE);
+                android.util.Log.d(TAG, "  final bbox=[" + left + "," + top + "," + right + "," + bottom + "]");
             }
 
             // Clamp to image bounds
@@ -236,6 +355,10 @@ public class ObjectDetection {
 
             // Skip invalid boxes
             if (right <= left || bottom <= top) {
+                if (allDetections.size() < 3) {
+                    android.util.Log.w(TAG, "  Skipping detection: invalid box after clamping");
+                }
+                invalidFiltered++;
                 continue;
             }
 
@@ -243,6 +366,38 @@ public class ObjectDetection {
             String label = (bestClass >= 0 && bestClass < labels.size()) ? labels.get(bestClass) : "Unknown";
 
             allDetections.add(new Detection(boundingBox, label, maxConfidence, bestClass));
+        }
+
+        android.util.Log.d(TAG, "Detection filtering: total=" + totalDetections +
+                ", confidence_filtered=" + confidenceFiltered +
+                ", bounds_filtered=" + boundsFiltered +
+                ", invalid_filtered=" + invalidFiltered +
+                ", remaining=" + allDetections.size());
+
+        // Log some statistics about the raw detections for debugging
+        if (totalDetections > 0) {
+            float maxConf = 0;
+            float minConf = 1;
+            int validConfCount = 0;
+
+            for (int i = 0; i < Math.min(output.length, 100); i++) {
+                float[] detection = output[i];
+
+                // Find max confidence for this detection
+                float detectionMaxConf = 0;
+                for (int j = 4; j < detection.length && j < 4 + labels.size(); j++) {
+                    detectionMaxConf = Math.max(detectionMaxConf, detection[j]);
+                }
+
+                if (detectionMaxConf > 0.01f) { // Only count non-trivial confidences
+                    maxConf = Math.max(maxConf, detectionMaxConf);
+                    minConf = Math.min(minConf, detectionMaxConf);
+                    validConfCount++;
+                }
+            }
+
+            android.util.Log.d(TAG, "Confidence stats: max=" + maxConf + ", min=" + minConf +
+                    ", valid_count=" + validConfCount + ", threshold=" + CONFIDENCE_THRESHOLD);
         }
 
         // Apply Non-Maximum Suppression
