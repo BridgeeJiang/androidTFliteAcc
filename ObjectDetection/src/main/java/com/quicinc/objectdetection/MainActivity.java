@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private ExecutorService cameraExecutor;
     private ExecutorService inferenceExecutor;
     private boolean isCameraRunning = false;
-    
+
     // Performance tracking
     private final DecimalFormat decimalFormat = new DecimalFormat("0.0");
     private Handler mainHandler;
@@ -70,11 +70,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.main_activity);
 
         initializeViews();
         setupClickListeners();
-        
+
         mainHandler = new Handler(Looper.getMainLooper());
         cameraExecutor = Executors.newSingleThreadExecutor();
         inferenceExecutor = Executors.newSingleThreadExecutor();
@@ -117,30 +117,30 @@ public class MainActivity extends AppCompatActivity {
         inferenceExecutor.execute(() -> {
             try {
                 Interpreter.Options options = new Interpreter.Options();
-                
+
                 if (cpuOnlyRadio.isChecked()) {
                     // CPU only
                     options.setNumThreads(4);
                 } else {
                     // Use hardware acceleration
-                    options = AIHubDefaults.getDefaultOptions();
+                    options = AIHubDefaults.delegatePriorityOrder();
                 }
 
                 String modelPath = getString(R.string.tfLiteModelAsset);
                 String labelsPath = getString(R.string.tfLiteLabelsAsset);
-                
+
                 objectDetection = new ObjectDetection(this, modelPath, labelsPath, options);
-                
+
                 mainHandler.post(() -> {
                     cameraControlButton.setEnabled(true);
                     Toast.makeText(this, "Model loaded successfully", Toast.LENGTH_SHORT).show();
                 });
-                
+
             } catch (IOException e) {
                 Log.e(TAG, "Error initializing model", e);
                 mainHandler.post(() -> {
-                    Toast.makeText(this, "Error loading model: " + e.getMessage(), 
-                                 Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Error loading model: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
                 });
             }
         });
@@ -151,27 +151,27 @@ public class MainActivity extends AppCompatActivity {
         if (isCameraRunning) {
             stopCamera();
         }
-        
+
         if (objectDetection != null) {
             objectDetection.close();
             objectDetection = null;
         }
-        
+
         initializeModel();
     }
 
     private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
-            ProcessCameraProvider.getInstance(this);
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
+                ProcessCameraProvider.getInstance(this);
 
         cameraProviderFuture.addListener(() -> {
             try {
                 cameraProvider = cameraProviderFuture.get();
                 bindCameraUseCases();
-                
+
                 isCameraRunning = true;
                 cameraControlButton.setText(R.string.stop_camera);
-                
+
             } catch (ExecutionException | InterruptedException e) {
                 Log.e(TAG, "Error starting camera", e);
                 Toast.makeText(this, "Error starting camera", Toast.LENGTH_SHORT).show();
@@ -186,9 +186,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Image analysis use case
         ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
-            .setTargetResolution(new Size(640, 640))
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build();
+                .setTargetResolution(new Size(640, 640))
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build();
 
         imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
 
@@ -215,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Convert ImageProxy to Bitmap
         Bitmap bitmap = ImageUtils.imageProxyToBitmap(imageProxy);
-        
+
         // Run inference
         long startTime = System.currentTimeMillis();
         List<Detection> detections = objectDetection.detect(bitmap);
@@ -256,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
         if (cameraProvider != null) {
             cameraProvider.unbindAll();
         }
-        
+
         isCameraRunning = false;
         cameraControlButton.setText(R.string.start_camera);
         overlayView.setDetections(null);
@@ -266,8 +266,8 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) 
-                != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(this, permission)
+                    != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
         }
@@ -276,15 +276,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                         @NonNull int[] grantResults) {
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        
+
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
                 initializeModel();
             } else {
-                Toast.makeText(this, "Permissions not granted by the user.", 
-                             Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Permissions not granted by the user.",
+                        Toast.LENGTH_SHORT).show();
                 finish();
             }
         }
@@ -293,15 +293,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
+
         if (objectDetection != null) {
             objectDetection.close();
         }
-        
+
         if (cameraExecutor != null) {
             cameraExecutor.shutdown();
         }
-        
+
         if (inferenceExecutor != null) {
             inferenceExecutor.shutdown();
         }

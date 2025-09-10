@@ -30,6 +30,15 @@ android {
         targetCompatibility JavaVersion.valueOf("VERSION_$javaTargetCompatibilityVersion")
     }
 
+    sourceSets {
+        main {
+            java {
+                srcDirs += '../tflite_helpers'
+                srcDirs += '../image_preprocessing_helpers'
+            }
+        }
+    }
+
     preBuild.doFirst {
         if (!file("./src/main/assets/" + project.properties["objectdetection_tfLiteModelAsset"]).exists()) {
             throw new RuntimeException(missingModelErrorMsg)

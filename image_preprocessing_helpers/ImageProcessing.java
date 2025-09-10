@@ -10,6 +10,18 @@ import android.graphics.RectF;
 
 public class ImageProcessing {
     /**
+     * Resize a bitmap to the specified dimensions without maintaining aspect ratio.
+     *
+     * @param bitmap  Image to resize
+     * @param width   Target width
+     * @param height  Target height
+     * @return Resized bitmap
+     */
+    public static Bitmap resizeBitmap(Bitmap bitmap, int width, int height) {
+        return Bitmap.createScaledBitmap(bitmap, width, height, true);
+    }
+
+    /**
      * Resize a bitmap while respecting its aspect ratio.
      * If the output image cannot fit perfectly within the requested output height / width,
      * padding is added such that the output bitmap will be the requested size.
